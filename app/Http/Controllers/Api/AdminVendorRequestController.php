@@ -32,13 +32,42 @@ class AdminVendorRequestController extends Controller
             'vendor_requests' => $query->get(),
         ]);
     }
-
-    public function approve($id)
+public function approve(
+    Request $request,
+    VendorRequest $vendorRequest
+): JsonResponse
 {
-    $vendorRequest = \App\Models\VendorRequest::findOrFail($id);
+    $admin = $request->user();
+
+    if (
+        ! $admin->isPlatformAdmin() &&
+        $admin->role !== 'tenant_admin'
+    ) {
+        return response()->json([
+            'message' => 'غير مصرح لك بالموافقة على طلبات Vendor.',
+        ], 403);
+    }
+
+    if (
+        $admin->role === 'tenant_admin' &&
+        $vendorRequest->tenant_id !== $admin->tenant_id
+    ) {
+        return response()->json([
+            'message' => 'هذا الطلب لا يتبع للـTenant الخاص بك.',
+        ], 403);
+    }
+
+    if ($vendorRequest->status !== 'pending') {
+        return response()->json([
+            'message' => 'هذا الطلب تمت مراجعته مسبقاً.',
+        ], 422);
+    }
 
     $vendorRequest->update([
         'status' => 'approved',
+        'rejection_reason' => null,
+        'reviewed_at' => now(),
+        'reviewed_by' => $admin->id,
     ]);
 
     $user = $vendorRequest->user;
@@ -47,32 +76,31 @@ class AdminVendorRequestController extends Controller
         'role' => 'vendor_owner',
         'status' => 'active',
     ]);
-    
-    Log::info('APPROVE STORE TEST', [
-    'user_id' => $user->id,
-    'business_name' => $vendorRequest->business_name,
-]);
 
-    if ($user->ownedStore()->count() === 0) {
+    if ($user->ownedStores()->count() === 0) {
 
-    Log::info('CREATING STORE');
-    $store = \App\Models\Store::create([
-        'tenant_id' => $vendorRequest->tenant_id,
-        'owner_id' => $user->id,
-        'name' => $vendorRequest->business_name,
-        'slug' => \Illuminate\Support\Str::slug($vendorRequest->business_name),
-        'status' => 'active',
-    ]);
+        $store = \App\Models\Store::create([
+            'tenant_id' => $vendorRequest->tenant_id,
+            'owner_id' => $user->id,
+            'name' => $vendorRequest->business_name,
+            'slug' => \Illuminate\Support\Str::slug(
+                $vendorRequest->business_name
+            ),
+            'status' => 'active',
+        ]);
 
-} else {
-    $store = $user->ownedStore()->first();
-}
+    } else {
+        $store = $user->ownedStores()->first();
+    }
 
     return response()->json([
-    'message' => 'تم قبول طلب Vendor وإنشاء المتجر بنجاح.',
-    'vendor_request' => $vendorRequest,
-    'store' => $store,
-]);
+        'message' => 'تم قبول طلب Vendor وإنشاء المتجر بنجاح.',
+        'vendor_request' => $vendorRequest->fresh([
+            'user',
+            'tenant',
+        ]),
+        'store' => $store,
+    ]);
 }
 
     public function reject(Request $request, VendorRequest $vendorRequest): JsonResponse

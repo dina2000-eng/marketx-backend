@@ -8,17 +8,22 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class OrderItem extends Model
 {
     protected $fillable = [
-        'order_id',
-        'product_id',
-        'store_id',
-        'quantity',
-        'price',
-    ];
+    'order_id',
+    'product_id',
+    'store_id',
+    'product_variant_id',
+    'product_name',
+    'variant_name',
+    'quantity',
+    'price',
+    'total',
+];
 
 
-    protected $casts = [
-        'price' => 'decimal:2',
-    ];
+   protected $casts = [
+    'price' => 'decimal:2',
+    'total' => 'decimal:2',
+];
 
 
     public function order(): BelongsTo
@@ -37,4 +42,12 @@ class OrderItem extends Model
     {
         return $this->belongsTo(Store::class);
     }
+
+    public function variant(): BelongsTo
+{
+    return $this->belongsTo(
+        ProductVariant::class,
+        'product_variant_id'
+    );
+}
 }

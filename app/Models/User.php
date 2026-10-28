@@ -39,7 +39,7 @@ class User extends Authenticatable
     }
 
     // متجر البائع (لو role = vendor_owner)
-    public function ownedStore(): HasMany
+    public function ownedStores(): HasMany
     {
         return $this->hasMany(Store::class, 'owner_id');
     }
@@ -62,4 +62,10 @@ public function orders(): HasMany
 {
     return $this->hasMany(Order::class);
 }
+
+public function wishlistItems(): HasMany
+{
+    return $this->hasMany(Wishlist::class);
+}
+
 }

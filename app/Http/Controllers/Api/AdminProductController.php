@@ -9,6 +9,34 @@ use Illuminate\Http\Request;
 
 class AdminProductController extends Controller
 {
+    public function index(Request $request): JsonResponse
+    {
+        $admin = $request->user();
+
+        if (! $admin->isPlatformAdmin() && $admin->role !== 'tenant_admin') {
+            return response()->json([
+                'message' => 'غير مصرح لك بعرض المنتجات.',
+            ], 403);
+        }
+
+        $query = Product::with([
+            'store',
+            'tenant',
+        ])
+            ->latest();
+
+        if ($admin->role === 'tenant_admin') {
+            $query->where(
+                'tenant_id',
+                $admin->tenant_id
+            );
+        }
+
+        return response()->json([
+            'products' => $query->get(),
+        ]);
+    }
+
     public function pending(Request $request): JsonResponse
     {
         $admin = $request->user();
@@ -19,12 +47,21 @@ class AdminProductController extends Controller
             ], 403);
         }
 
-        $query = Product::with(['store', 'tenant'])
-            ->where('status', 'pending_review')
+        $query = Product::with([
+            'store',
+            'tenant',
+        ])
+            ->where(
+                'status',
+                'pending_review'
+            )
             ->latest();
 
         if ($admin->role === 'tenant_admin') {
-            $query->where('tenant_id', $admin->tenant_id);
+            $query->where(
+                'tenant_id',
+                $admin->tenant_id
+            );
         }
 
         return response()->json([
@@ -32,9 +69,10 @@ class AdminProductController extends Controller
         ]);
     }
 
-
-    public function approve(Request $request, Product $product): JsonResponse
-    {
+    public function approve(
+        Request $request,
+        Product $product
+    ): JsonResponse {
         $admin = $request->user();
 
         if (! $admin->isPlatformAdmin() && $admin->role !== 'tenant_admin') {
@@ -45,33 +83,47 @@ class AdminProductController extends Controller
 
         if (
             $admin->role === 'tenant_admin' &&
-            $product->tenant_id !== $admin->tenant_id
+            $product->tenant_id !==
+                $admin->tenant_id
         ) {
             return response()->json([
-                'message' => 'هذا المنتج لا يتبع للـTenant الخاص بك.',
+                'message' =>
+                    'هذا المنتج لا يتبع للـTenant الخاص بك.',
             ], 403);
         }
 
-        if ($product->status !== 'pending_review') {
+        if (
+            $product->status !==
+            'pending_review'
+        ) {
             return response()->json([
-                'message' => 'هذا المنتج تمت مراجعته مسبقاً.',
+                'message' =>
+                    'هذا المنتج تمت مراجعته مسبقاً.',
             ], 422);
         }
 
         $product->update([
-         'status' => 'approved',
-         'rejection_reason' => null,
-]);
+            'status' =>
+                'approved',
+            'rejection_reason' =>
+                null,
+        ]);
 
         return response()->json([
-            'message' => 'تمت الموافقة على المنتج بنجاح.',
-            'product' => $product->fresh(['store', 'tenant']),
+            'message' =>
+                'تمت الموافقة على المنتج بنجاح.',
+            'product' =>
+                $product->fresh([
+                    'store',
+                    'tenant',
+                ]),
         ]);
     }
 
-
-    public function reject(Request $request, Product $product): JsonResponse
-    {
+    public function reject(
+        Request $request,
+        Product $product
+    ): JsonResponse {
         $admin = $request->user();
 
         if (! $admin->isPlatformAdmin() && $admin->role !== 'tenant_admin') {
@@ -82,25 +134,41 @@ class AdminProductController extends Controller
 
         if (
             $admin->role === 'tenant_admin' &&
-            $product->tenant_id !== $admin->tenant_id
+            $product->tenant_id !==
+                $admin->tenant_id
         ) {
             return response()->json([
-                'message' => 'هذا المنتج لا يتبع للـTenant الخاص بك.',
+                'message' =>
+                    'هذا المنتج لا يتبع للـTenant الخاص بك.',
             ], 403);
         }
 
-        $validated = $request->validate([
-            'rejection_reason' => ['required', 'string', 'max:1000'],
-        ]);
+        $validated =
+            $request->validate([
+                'rejection_reason' => [
+                    'required',
+                    'string',
+                    'max:1000',
+                ],
+            ]);
 
         $product->update([
-            'status' => 'rejected',
-            'rejection_reason' => $validated['rejection_reason'],
+            'status' =>
+                'rejected',
+            'rejection_reason' =>
+                $validated[
+                    'rejection_reason'
+                ],
         ]);
 
         return response()->json([
-            'message' => 'تم رفض المنتج.',
-            'product' => $product->fresh(['store', 'tenant']),
+            'message' =>
+                'تم رفض المنتج.',
+            'product' =>
+                $product->fresh([
+                    'store',
+                    'tenant',
+                ]),
         ]);
     }
 }

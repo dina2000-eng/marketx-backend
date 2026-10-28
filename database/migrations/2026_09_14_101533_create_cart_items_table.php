@@ -9,7 +9,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('cart_items', function (Blueprint $table) {
-
             $table->id();
 
             $table->foreignId('cart_id')
@@ -23,19 +22,25 @@ return new class extends Migration
             $table->unsignedInteger('quantity')
                 ->default(1);
 
-            $table->decimal('price', 12, 2);
+            $table->decimal(
+                'price',
+                12,
+                2
+            );
 
             $table->timestamps();
 
             $table->unique([
                 'cart_id',
-                'product_id'
+                'product_id',
             ]);
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('cart_items');
+        Schema::dropIfExists(
+            'cart_items'
+        );
     }
 };

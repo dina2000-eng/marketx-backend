@@ -14,26 +14,25 @@ class Order extends Model
         'status',
         'total_amount',
         'currency',
+        'payment_method',
+        'payment_status',
         'shipping_address',
+        'country_code',
     ];
-
 
     protected $casts = [
         'total_amount' => 'decimal:2',
     ];
-
 
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
     }
 
-
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
-
 
     public function items(): HasMany
     {
@@ -41,7 +40,19 @@ class Order extends Model
     }
 
     public function vendorOrders(): HasMany
+    {
+        return $this->hasMany(VendorOrder::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function refunds(): HasMany
 {
-    return $this->hasMany(VendorOrder::class);
+    return $this->hasMany(
+        Refund::class
+    );
 }
 }
