@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\AttributeValue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -21,13 +22,6 @@ class VendorProductVariantController extends Controller
             $product
         );
 
-        /*
-         * "Default" is an internal variant
-         * used for simple products.
-         *
-         * It should never appear in the
-         * vendor variants management UI.
-         */
         $variants = $product->variants()
             ->where('name', '!=', 'Default')
             ->with([
@@ -70,6 +64,24 @@ class VendorProductVariantController extends Controller
             'attribute_values.*' =>
                 'exists:attribute_values,id',
         ]);
+
+        $attributeValueIds = $data['attribute_values'] ?? [];
+
+if (!empty($attributeValueIds)) {
+    $validCount = AttributeValue::query()
+        ->whereIn('id', $attributeValueIds)
+        ->whereHas('attribute', function ($query) use ($product) {
+            $query->where('store_id', $product->store_id);
+        })
+        ->count();
+
+    if ($validCount !== count(array_unique($attributeValueIds))) {
+        throw ValidationException::withMessages([
+            'attribute_values' =>
+                'بعض قيم الخصائص لا تنتمي إلى متجر هذا المنتج.',
+        ]);
+    }
+}
 
         $variant = DB::transaction(
             function () use (
@@ -219,6 +231,24 @@ class VendorProductVariantController extends Controller
             'attribute_values.*' =>
                 'exists:attribute_values,id',
         ]);
+
+        $attributeValueIds = $data['attribute_values'] ?? [];
+
+if (!empty($attributeValueIds)) {
+    $validCount = AttributeValue::query()
+        ->whereIn('id', $attributeValueIds)
+        ->whereHas('attribute', function ($query) use ($product) {
+            $query->where('store_id', $product->store_id);
+        })
+        ->count();
+
+    if ($validCount !== count(array_unique($attributeValueIds))) {
+        throw ValidationException::withMessages([
+            'attribute_values' =>
+                'بعض قيم الخصائص لا تنتمي إلى متجر هذا المنتج.',
+        ]);
+    }
+}
 
         DB::transaction(
             function () use (

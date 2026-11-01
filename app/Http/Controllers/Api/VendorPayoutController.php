@@ -14,8 +14,9 @@ class VendorPayoutController extends Controller
     public function index(Request $request)
     {
         $storeIds = $request->user()
-            ->ownedStores()
-            ->pluck('id');
+    ->ownedStores()
+    ->where('tenant_id', $request->user()->tenant_id)
+    ->pluck('id');
 
         $payouts = Payout::query()
             ->whereIn(
@@ -64,63 +65,16 @@ class VendorPayoutController extends Controller
             ],
         ]);
 
-        $store = Store::query()
-            ->whereKey(
-                $data['store_id']
-            )
-            ->whereHas(
-                'owner',
-                fn ($query) =>
-                    $query->whereKey(
-                        $request->user()->id
-                    )
-            )
-            ->first();
-
-        /*
-         * If your Store relation is not
-         * called owner, ownership check
-         * below handles it safely.
-         */
-        if (! $store) {
-            $store = $request->user()
+        $store = $request->user()
     ->ownedStores()
-    ->where(
-        'stores.id',
-        $data['store_id']
-    )
+    ->where('tenant_id', $request->user()->tenant_id)
+    ->whereKey($data['store_id'])
     ->first();
-        }
 
 if (! $store) {
     throw ValidationException::withMessages([
-        'store_id' =>
-            'هذا المتجر غير تابع لك.',
+        'store_id' => 'هذا المتجر غير تابع لك.',
     ]);
 }
-
-        try {
-            $payout = $payoutService->request(
-                $store,
-                (float) $data['amount'],
-                $data['currency'],
-                $data['method'],
-                $data['destination_details']
-                    ?? []
-            );
-        } catch (\RuntimeException $e) {
-            throw ValidationException::withMessages([
-                'amount' =>
-                    $e->getMessage(),
-            ]);
-        }
-
-        return response()->json([
-            'message' =>
-                'تم إرسال طلب السحب بنجاح.',
-
-            'payout' =>
-                $payout,
-        ], 201);
     }
 }

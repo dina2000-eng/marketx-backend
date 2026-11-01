@@ -82,7 +82,7 @@ Route::post(
     'throttle:5,1'
 );
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware([ 'auth:sanctum',  'tenant.active',])->group(function () {
 
     Route::put(
     '/profile',
@@ -144,7 +144,8 @@ Route::get(
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware([ 'auth:sanctum',  'tenant.active',])->group(function () {
+
 
     /*
     |--------------------------------------------------------------------------
@@ -596,7 +597,7 @@ Route::post(
 |--------------------------------------------------------------------------
 */
 
-Route::middleware([ 'auth:sanctum', 'role:tenant_admin,platform_admin',
+Route::middleware([  'auth:sanctum', 'tenant.active',  'role:tenant_admin,platform_admin',
 ])
     ->prefix('admin')
     ->group(function () {

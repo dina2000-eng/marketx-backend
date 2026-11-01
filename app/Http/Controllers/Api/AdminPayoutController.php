@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+
 use App\Http\Controllers\Controller;
 use App\Models\Payout;
 use App\Services\Marketplace\PayoutService;
@@ -12,31 +13,23 @@ class AdminPayoutController extends Controller
 {
     public function index(Request $request)
     {
+        $user = $request->user();
+
         $query = Payout::query()
             ->with('store')
             ->latest();
 
-        /*
-         * Tenant admin sees only
-         * stores in their tenant.
-         *
-         * Platform admin normally has
-         * tenant_id = null and sees all.
-         */
-        if ($request->user()->tenant_id !== null) {
-            $query->whereHas(
-                'store',
-                fn ($storeQuery) =>
-                    $storeQuery->where(
-                        'tenant_id',
-                        $request->user()->tenant_id
-                    )
-            );
+        // Platform admin can see all payouts.
+        if (! $user->isPlatformAdmin()) {
+            abort_unless($user->tenant_id, 403);
+
+            $query->whereHas('store', function ($storeQuery) use ($user) {
+                $storeQuery->where('tenant_id', $user->tenant_id);
+            });
         }
 
         return response()->json([
-            'payouts' =>
-                $query->get(),
+            'payouts' => $query->get(),
         ]);
     }
 
@@ -45,12 +38,26 @@ class AdminPayoutController extends Controller
         Payout $payout,
         PayoutService $payoutService
     ) {
+        $user = $request->user();
+
+        // Verify tenant ownership before changing payout status.
+        if (! $user->isPlatformAdmin()) {
+            abort_unless($user->tenant_id, 403);
+
+            $payout->loadMissing('store');
+
+            abort_unless(
+                $payout->store &&
+                (int) $payout->store->tenant_id === (int) $user->tenant_id,
+                403
+            );
+        }
+
         $data = $request->validate([
             'status' => [
                 'required',
                 'in:processing,paid,failed,cancelled',
             ],
-
             'reference' => [
                 'nullable',
                 'string',
@@ -58,66 +65,25 @@ class AdminPayoutController extends Controller
             ],
         ]);
 
-        /*
-         * Prevent tenant admin from
-         * managing another tenant.
-         */
-        if (
-            $request->user()->tenant_id !== null
-        ) {
-            $payout->loadMissing('store');
-
-            if (
-                (int) $payout->store->tenant_id !==
-                (int) $request->user()->tenant_id
-            ) {
-                abort(403);
-            }
-        }
-
         try {
-            $updated = match (
-                $data['status']
-            ) {
-                'processing' =>
-                    $payoutService
-                        ->markProcessing(
-                            $payout
-                        ),
-
-                'paid' =>
-                    $payoutService
-                        ->markPaid(
-                            $payout,
-                            $data['reference']
-                                ?? null
-                        ),
-
-                'failed' =>
-                    $payoutService
-                        ->markFailed(
-                            $payout
-                        ),
-
-                'cancelled' =>
-                    $payoutService
-                        ->cancel(
-                            $payout
-                        ),
+            $updated = match ($data['status']) {
+                'processing' => $payoutService->markProcessing($payout),
+                'paid' => $payoutService->markPaid(
+                    $payout,
+                    $data['reference'] ?? null
+                ),
+                'failed' => $payoutService->markFailed($payout),
+                'cancelled' => $payoutService->cancel($payout),
             };
         } catch (\RuntimeException $e) {
             throw ValidationException::withMessages([
-                'status' =>
-                    $e->getMessage(),
+                'status' => $e->getMessage(),
             ]);
         }
 
         return response()->json([
-            'message' =>
-                'تم تحديث طلب السحب.',
-
-            'payout' =>
-                $updated,
+            'message' => 'تم تحديث طلب السحب.',
+            'payout' => $updated,
         ]);
     }
 }

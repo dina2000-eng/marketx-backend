@@ -22,31 +22,22 @@ class VendorAttributeValueController extends Controller
         );
     }
 
-    public function store(
-        Request $request,
-        ProductAttribute $attribute
-    )
-    {
-        $this->authorizeAttribute($request, $attribute);
+   public function store(
+    Request $request,
+    ProductAttribute $attribute
+) {
+    $this->authorizeAttribute($request, $attribute);
 
-       $data = $request->validate([
-    'name' => 'required|string|max:255',
-    'sku' => 'nullable|string|max:255',
-    'price' => 'required|numeric|min:0',
-    'stock' => 'required|integer|min:0',
+    $data = $request->validate([
+        'value' => 'required|string|max:255',
+    ]);
 
-    'attribute_values' => 'nullable|array',
+    $value = $attribute->values()->create([
+        'value' => $data['value'],
+    ]);
 
-    'attribute_values.*' => 'exists:attribute_values,id',
-]);
-
-        $value = AttributeValue::create([
-            'product_attribute_id'=>$attribute->id,
-            'value'=>$data['value'],
-        ]);
-
-        return response()->json($value,201);
-    }
+    return response()->json($value, 201);
+}
 
     public function destroy(
         Request $request,
@@ -66,16 +57,16 @@ class VendorAttributeValueController extends Controller
     }
 
     private function authorizeAttribute(
-        Request $request,
-        ProductAttribute $attribute
-    ): void
-    {
-        abort_unless(
-            $attribute->store_id ===
-            $request->user()->ownedStore()->first()->id,
-            403,
-            'Unauthorized'
-        );
-    }
-
+    Request $request,
+    ProductAttribute $attribute
+): void {
+    abort_unless(
+        $request->user()
+            ->ownedStores()
+            ->whereKey($attribute->store_id)
+            ->exists(),
+        403,
+        'Unauthorized'
+    );
+}
 }

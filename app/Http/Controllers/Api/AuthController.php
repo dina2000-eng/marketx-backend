@@ -778,40 +778,31 @@ class AuthController extends Controller
     /**
      * Resolve tenant
      */
-    private function resolveTenant(
-        Request $request
-    ): Tenant {
-        $request->validate([
-            'tenant_id' => [
-                'required_without:tenant_slug',
-                'integer',
-                'exists:tenants,id',
-            ],
+    private function resolveTenant(Request $request): Tenant
+{
+    $request->validate([
+        'tenant_id' => [
+            'required_without:tenant_slug',
+            'integer',
+            'exists:tenants,id',
+        ],
+        'tenant_slug' => [
+            'required_without:tenant_id',
+            'string',
+            'exists:tenants,slug',
+        ],
+    ]);
 
-            'tenant_slug' => [
-                'required_without:tenant_id',
-                'string',
-                'exists:tenants,slug',
-            ],
-        ]);
+    $tenant = $request->filled('tenant_id')
+        ? Tenant::find($request->input('tenant_id'))
+        : Tenant::where('slug', $request->input('tenant_slug'))->first();
 
-        return $request
-            ->filled(
-                'tenant_id'
-            )
-            ? Tenant::findOrFail(
-                $request->input(
-                    'tenant_id'
-                )
-            )
-            : Tenant::where(
-                'slug',
-                $request->input(
-                    'tenant_slug'
-                )
-            )->firstOrFail();
+    if (! $tenant || $tenant->status !== 'active') {
+        abort(403, 'This company is not active.');
     }
 
+    return $tenant;
+}
     public function changePassword(Request $request): JsonResponse
 {
     $user = $request->user();
