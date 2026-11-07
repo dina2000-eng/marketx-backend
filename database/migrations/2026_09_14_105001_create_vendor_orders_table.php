@@ -21,14 +21,7 @@ return new class extends Migration
                 ->cascadeOnDelete();
 
 
-            $table->enum('status', [
-                'pending',
-                'confirmed',
-                'processing',
-                'shipped',
-                'completed',
-                'cancelled'
-            ])->default('pending');
+            $table->string('status')->default('pending');
 
 
             $table->decimal('total_amount', 12, 2)
