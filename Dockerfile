@@ -23,6 +23,7 @@ RUN apk add --no-cache \
     oniguruma-dev \
     postgresql-dev \
     icu-dev \
+    sqlite-dev \
     $PHPIZE_DEPS
 
 RUN docker-php-ext-install \
@@ -58,11 +59,10 @@ RUN composer dump-autoload --optimize \
        storage/logs \
        storage/app/public \
        bootstrap/cache \
-   && chown -R www-data:www-data storage bootstrap/cache \
-   && chown www-data:www-data database database/database.sqlite \
-   && chmod -R 775 storage bootstrap/cache \
-   && chmod 775 database \
-   && chmod 664 database/database.sqlite
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && chown www-data:www-data database \
+    && chmod -R 775 storage bootstrap/cache \
+    && chmod 775 database
 
 COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisord.conf /etc/supervisord.conf
