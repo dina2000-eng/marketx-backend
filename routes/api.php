@@ -53,14 +53,15 @@ Route::prefix('auth')->group(function () {
         [AuthController::class, 'login']
     );
 
-    Route::post(
+   Route::post(
+    '/platform-login',
+    [AuthController::class, 'platformLogin']
+)->middleware('throttle:5,1');
+
+Route::post(
     '/forgot-password',
-    [
-        AuthController::class,
-        'forgotPassword'
-    ])->middleware(
-    'throttle:5,1'
-);
+    [AuthController::class, 'forgotPassword']
+)->middleware('throttle:5,1');
 
 Route::post(
     '/verify-reset-code',

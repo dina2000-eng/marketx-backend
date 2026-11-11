@@ -205,6 +205,50 @@ class AuthController extends Controller
         ]);
     }
 
+
+public function platformLogin(Request $request): JsonResponse
+{
+    $validated = $request->validate([
+        'login' => ['required', 'string'],
+        'password' => ['required', 'string'],
+    ]);
+
+    $user = User::whereNull('tenant_id')
+        ->where('role', 'platform_admin')
+        ->where(function ($query) use ($validated) {
+            $query->where('email', $validated['login'])
+                ->orWhere('phone', $validated['login']);
+        })
+        ->first();
+
+    if (
+        ! $user ||
+        ! Hash::check($validated['password'], $user->password)
+    ) {
+        return response()->json([
+            'message' => 'بيانات الدخول غير صحيحة.',
+        ], 401);
+    }
+
+    if ($user->status !== 'active') {
+        return response()->json([
+            'message' => 'الحساب غير مفعّل أو موقوف حالياً.',
+        ], 403);
+    }
+
+    $user->forceFill([
+        'last_login_at' => now(),
+    ])->save();
+
+    $token = $user->createToken('platform-admin')->plainTextToken;
+
+    return response()->json([
+        'user' => $user,
+        'token' => $token,
+    ]);
+}
+
+
     /**
      * Send reset OTP
      */
