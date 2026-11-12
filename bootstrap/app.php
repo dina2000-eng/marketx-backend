@@ -17,9 +17,10 @@ return Application::configure(
     )
 
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias([
+       $middleware->alias([
     'role' => \App\Http\Middleware\RoleMiddleware::class,
     'tenant.active' => \App\Http\Middleware\EnsureTenantIsActive::class,
+    'platform.admin' => \App\Http\Middleware\EnsurePlatformAdmin::class,
 ]);
 
     $middleware->redirectGuestsTo(
