@@ -1,3 +1,4 @@
+
 # Build frontend assets
 FROM node:22-alpine AS frontend
 
@@ -35,6 +36,8 @@ RUN docker-php-ext-install \
     intl \
     zip \
     opcache
+
+RUN printf '\ncatch_workers_output = yes\nphp_admin_flag[log_errors] = on\nphp_admin_value[error_log] = /proc/self/fd/2\n' >> /usr/local/etc/php-fpm.d/www.conf
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
