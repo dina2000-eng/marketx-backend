@@ -188,6 +188,29 @@ public function test_vendor_cannot_assign_another_stores_attribute_values_to_var
     ]);
 }
 
+public function test_editing_rejected_product_resubmits_it_for_review(): void
+{
+    [$vendorA, $vendorB, $productB] = $this->createTwoVendors();
+
+    $productB->update([
+        'status' => 'rejected',
+        'rejection_reason' => 'Image quality is poor',
+    ]);
+
+    $this->actingAs($vendorB, 'sanctum')
+        ->putJson("/api/vendor/products/{$productB->id}", [
+            'name' => 'Updated Product',
+        ])
+        ->assertOk();
+
+    $this->assertDatabaseHas('products', [
+        'id' => $productB->id,
+        'name' => 'Updated Product',
+        'status' => 'pending_review',
+        'rejection_reason' => null,
+    ]);
+}
+
 public function test_vendor_cannot_update_another_vendors_product(): void
 {
     [$vendorA, $vendorB, $productB] = $this->createTwoVendors();

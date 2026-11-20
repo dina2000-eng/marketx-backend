@@ -143,6 +143,16 @@ class AdminProductController extends Controller
             ], 403);
         }
 
+                if (
+            $product->status !==
+            'pending_review'
+        ) {
+            return response()->json([
+                'message' =>
+                    'هذا المنتج تمت مراجعته مسبقاً.',
+            ], 422);
+        }
+
         $validated =
             $request->validate([
                 'rejection_reason' => [

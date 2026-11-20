@@ -35,8 +35,7 @@ class AdminVendorRequestController extends Controller
 public function approve(
     Request $request,
     VendorRequest $vendorRequest
-): JsonResponse
-{
+): JsonResponse {
     $admin = $request->user();
 
     if (
@@ -57,43 +56,71 @@ public function approve(
         ], 403);
     }
 
-    if ($vendorRequest->status !== 'pending') {
+    [$vendorRequest, $store] = DB::transaction(function () use (
+        $vendorRequest,
+        $admin
+    ) {
+              $vendorRequest = VendorRequest::whereKey($vendorRequest->id)
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        if ($vendorRequest->status !== 'pending') {
+            return [null, null];
+        }
+        $vendorRequest->update([
+            'status' => 'approved',
+            'rejection_reason' => null,
+            'reviewed_at' => now(),
+            'reviewed_by' => $admin->id,
+        ]);
+
+        $user = $vendorRequest->user;
+
+        $user->update([
+            'role' => 'vendor_owner',
+            'status' => 'active',
+        ]);
+
+        if ($user->ownedStores()->count() === 0) {
+            $baseSlug = \Illuminate\Support\Str::slug(
+                $vendorRequest->business_name
+            );
+
+            $slug = $baseSlug;
+            $counter = 1;
+
+            while (
+                \App\Models\Store::where(
+                    'tenant_id',
+                    $vendorRequest->tenant_id
+                )->where('slug', $slug)->exists()
+            ) {
+                $slug = $baseSlug . '-' . $counter;
+                $counter++;
+            }
+
+            $store = \App\Models\Store::create([
+                'tenant_id' => $vendorRequest->tenant_id,
+                'owner_id' => $user->id,
+                'name' => $vendorRequest->business_name,
+                'slug' => $slug,
+                'country_code' => $vendorRequest->tenant->country_code,
+                'status' => 'active',
+            ]);
+        } else {
+            $store = $user->ownedStores()->first();
+        }
+
+        return [$vendorRequest, $store];
+    });
+
+       if (! $vendorRequest) {
         return response()->json([
             'message' => 'هذا الطلب تمت مراجعته مسبقاً.',
         ], 422);
     }
 
-    $vendorRequest->update([
-        'status' => 'approved',
-        'rejection_reason' => null,
-        'reviewed_at' => now(),
-        'reviewed_by' => $admin->id,
-    ]);
-
-    $user = $vendorRequest->user;
-
-    $user->update([
-        'role' => 'vendor_owner',
-        'status' => 'active',
-    ]);
-
-    if ($user->ownedStores()->count() === 0) {
-
-        $store = \App\Models\Store::create([
-            'tenant_id' => $vendorRequest->tenant_id,
-            'owner_id' => $user->id,
-            'name' => $vendorRequest->business_name,
-            'slug' => \Illuminate\Support\Str::slug(
-                $vendorRequest->business_name
-            ),
-            'status' => 'active',
-        ]);
-
-    } else {
-        $store = $user->ownedStores()->first();
-    }
-
-    return response()->json([
+     return response()->json([
         'message' => 'تم قبول طلب Vendor وإنشاء المتجر بنجاح.',
         'vendor_request' => $vendorRequest->fresh([
             'user',
@@ -101,6 +128,7 @@ public function approve(
         ]),
         'store' => $store,
     ]);
+
 }
 
     public function reject(Request $request, VendorRequest $vendorRequest): JsonResponse

@@ -225,33 +225,22 @@ class StoreController extends Controller
                 $validated['country_code']
             );
 
-        $store->update([
-            'name' =>
-                $validated['name'],
+                $updateData = [
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'email' => $validated['email'] ?? null,
+            'country_code' => $validated['country_code'],
+            'logo_url' => $validated['logo_url'] ?? null,
+            'cover_url' => $validated['cover_url'] ?? null,
+        ];
 
-            'description' =>
-                $validated['description']
-                    ?? null,
+        if ($store->status === 'rejected') {
+            $updateData['status'] = 'pending';
+            $updateData['rejection_reason'] = null;
+        }
 
-            'phone' =>
-                $validated['phone']
-                    ?? null,
-
-            'email' =>
-                $validated['email']
-                    ?? null,
-
-            'country_code' =>
-                $validated['country_code'],
-
-            'logo_url' =>
-                $validated['logo_url']
-                    ?? null,
-
-            'cover_url' =>
-                $validated['cover_url']
-                    ?? null,
-        ]);
+        $store->update($updateData);
 
         return response()->json([
             'message' =>

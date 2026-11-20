@@ -238,9 +238,14 @@ class VendorProductController extends Controller
                 $product,
                 $data
             ) {
-                $product->update(
-                    $data
-                );
+               $updateData = $data;
+
+if ($product->status === 'rejected') {
+    $updateData['status'] = 'pending_review';
+    $updateData['rejection_reason'] = null;
+}
+
+$product->update($updateData);
 
                 /*
                  * For simple products,
