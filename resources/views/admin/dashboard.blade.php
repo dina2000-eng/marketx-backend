@@ -115,6 +115,35 @@
         </form>
     </header>
 
+    <section class="panel" style="margin-bottom: 24px;">
+    <h2>طلبات الانضمام كتاجر</h2>
+
+    @forelse ($vendorRequests as $vendorRequest)
+        <article class="product">
+            <h3>{{ $vendorRequest->business_name }}</h3>
+
+            <div class="details">
+                <span>اسم المستخدم: {{ $vendorRequest->user?->name ?? 'غير متوفر' }}</span>
+                <span>البريد: {{ $vendorRequest->user?->email ?? 'غير متوفر' }}</span>
+                <span>رقم الطلب: {{ $vendorRequest->id }}</span>
+            </div>
+
+            <div class="actions">
+                <form method="POST"
+                      action="{{ route('admin.vendor-requests.approve', $vendorRequest) }}"
+                      onsubmit="return confirm('هل أنت متأكد من الموافقة على طلب هذا التاجر؟')">
+                    @csrf
+                    <button class="approve" type="submit">
+                        الموافقة على طلب التاجر
+                    </button>
+                </form>
+            </div>
+        </article>
+    @empty
+        <div class="empty">لا توجد طلبات تجار معلّقة حالياً.</div>
+    @endforelse
+</section>
+
     <main class="panel">
         <h2>المنتجات بانتظار الموافقة</h2>
 

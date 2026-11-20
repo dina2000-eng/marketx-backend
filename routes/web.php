@@ -26,4 +26,7 @@ Route::middleware(['auth:web', 'platform.admin'])->prefix('admin')->name('admin.
 
     Route::post('/products/{product}/reject', [AdminWebController::class, 'rejectProduct'])
         ->name('products.reject');
+
+    Route::post('/vendor-requests/{vendorRequest}/approve', [AdminWebController::class, 'approveVendorRequest'])
+    ->name('vendor-requests.approve');
 });

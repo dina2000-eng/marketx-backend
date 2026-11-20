@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Models\VendorRequest;
 
 class AdminWebController extends Controller
 {
@@ -73,7 +74,12 @@ class AdminWebController extends Controller
             ->latest()
             ->paginate(15);
 
-        return view('admin.dashboard', compact('products'));
+        $vendorRequests = VendorRequest::with(['user', 'tenant'])
+    ->where('status', 'pending')
+    ->latest()
+    ->get();
+
+        return view('admin.dashboard', compact('products', 'vendorRequests'));
     }
 
     public function approveProduct(Product $product)
@@ -111,4 +117,57 @@ class AdminWebController extends Controller
 
         return back()->with('success', 'تم رفض المنتج.');
     }
+
+    public function approveVendorRequest(VendorRequest $vendorRequest)
+{
+    if ($vendorRequest->status !== 'pending') {
+        return back()->withErrors([
+            'vendor' => 'هذا الطلب تمت مراجعته مسبقاً.',
+        ]);
+    }
+
+    \Illuminate\Support\Facades\DB::transaction(function () use ($vendorRequest) {
+        $vendorRequest->update([
+            'status' => 'approved',
+            'rejection_reason' => null,
+            'reviewed_at' => now(),
+            'reviewed_by' => Auth::guard('web')->id(),
+        ]);
+
+        $user = $vendorRequest->user;
+
+        $user->update([
+            'role' => 'vendor_owner',
+            'status' => 'active',
+        ]);
+
+        if ($user->ownedStores()->count() === 0) {
+            $baseSlug = \Illuminate\Support\Str::slug(
+                $vendorRequest->business_name
+            );
+
+            $slug = $baseSlug;
+            $counter = 1;
+
+            while (
+                \App\Models\Store::where('tenant_id', $vendorRequest->tenant_id)
+                    ->where('slug', $slug)
+                    ->exists()
+            ) {
+                $slug = $baseSlug . '-' . $counter++;
+            }
+
+            \App\Models\Store::create([
+                'tenant_id' => $vendorRequest->tenant_id,
+                'owner_id' => $user->id,
+                'name' => $vendorRequest->business_name,
+                'slug' => $slug,
+                'country_code' => $vendorRequest->tenant->country_code,
+                'status' => 'active',
+            ]);
+        }
+    });
+
+    return back()->with('success', 'تم قبول طلب التاجر وإنشاء المتجر بنجاح.');
+}
 }
