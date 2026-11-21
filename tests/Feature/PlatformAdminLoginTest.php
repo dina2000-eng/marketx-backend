@@ -32,21 +32,59 @@ class PlatformAdminLoginTest extends TestCase
     }
 
     public function test_non_platform_admin_cannot_use_platform_login(): void
-{
-    User::create([
-        'tenant_id' => null,
-        'name' => 'Customer',
-        'email' => 'customer@example.com',
-        'password' => 'SecurePassword123',
-        'role' => 'customer',
-        'status' => 'active',
-    ]);
+    {
+        User::create([
+            'tenant_id' => null,
+            'name' => 'Customer',
+            'email' => 'customer@example.com',
+            'password' => 'SecurePassword123',
+            'role' => 'customer',
+            'status' => 'active',
+        ]);
 
-    $response = $this->postJson('/api/auth/platform-login', [
-        'login' => 'customer@example.com',
-        'password' => 'SecurePassword123',
-    ]);
+        $response = $this->postJson('/api/auth/platform-login', [
+            'login' => 'customer@example.com',
+            'password' => 'SecurePassword123',
+        ]);
 
-    $response->assertUnauthorized();
-}
+        $response->assertUnauthorized();
+    }
+
+    public function test_inactive_platform_admin_cannot_login(): void
+    {
+        User::create([
+            'tenant_id' => null,
+            'name' => 'Inactive Admin',
+            'email' => 'inactive@example.com',
+            'password' => 'SecurePassword123',
+            'role' => 'platform_admin',
+            'status' => 'blocked',
+        ]);
+
+        $this->postJson('/api/auth/platform-login', [
+            'login' => 'inactive@example.com',
+            'password' => 'SecurePassword123',
+        ])->assertForbidden();
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+    }
+
+    public function test_platform_admin_cannot_login_with_wrong_password(): void
+    {
+        User::create([
+            'tenant_id' => null,
+            'name' => 'Platform Admin',
+            'email' => 'admin-wrong@example.com',
+            'password' => 'SecurePassword123',
+            'role' => 'platform_admin',
+            'status' => 'active',
+        ]);
+
+        $this->postJson('/api/auth/platform-login', [
+            'login' => 'admin-wrong@example.com',
+            'password' => 'WrongPassword123',
+        ])->assertUnauthorized();
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+    }
 }

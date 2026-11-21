@@ -1,39 +1,39 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AddressController;
+use App\Http\Controllers\Api\AdminCategoryController;
+use App\Http\Controllers\Api\AdminDashboardController;
+use App\Http\Controllers\Api\AdminOrderController;
+use App\Http\Controllers\Api\AdminPaymentController;
+use App\Http\Controllers\Api\AdminPayoutController;
+use App\Http\Controllers\Api\AdminProductController;
+use App\Http\Controllers\Api\AdminStoreController;
+use App\Http\Controllers\Api\AdminVendorRequestController;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\PublicProductController;
-use App\Http\Controllers\Api\CategoryController;
-use App\Http\Controllers\Api\VendorRequestController;
-use App\Http\Controllers\Api\StoreController;
 use App\Http\Controllers\Api\CartController;
+use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CheckoutController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OrderController;
-use App\Http\Controllers\Api\VendorOrderController;
+use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\PaymentWebhookController;
+use App\Http\Controllers\Api\PublicProductController;
+use App\Http\Controllers\Api\StoreController;
+use App\Http\Controllers\Api\VendorAttributeController;
+use App\Http\Controllers\Api\VendorAttributeValueController;
 use App\Http\Controllers\Api\VendorCategoryController;
+use App\Http\Controllers\Api\VendorInventoryController;
+use App\Http\Controllers\Api\VendorInventoryDashboardController;
+use App\Http\Controllers\Api\VendorInventoryTransactionController;
+use App\Http\Controllers\Api\VendorOrderController;
+use App\Http\Controllers\Api\VendorPayoutController;
 use App\Http\Controllers\Api\VendorProductController;
 use App\Http\Controllers\Api\VendorProductImageController;
 use App\Http\Controllers\Api\VendorProductVariantController;
-use App\Http\Controllers\Api\VendorAttributeController;
-use App\Http\Controllers\Api\VendorAttributeValueController;
-use App\Http\Controllers\Api\VendorInventoryController;
-use App\Http\Controllers\Api\VendorInventoryTransactionController;
-use App\Http\Controllers\Api\VendorInventoryDashboardController;
-use App\Http\Controllers\Api\AdminVendorRequestController;
-use App\Http\Controllers\Api\AdminStoreController;
-use App\Http\Controllers\Api\AdminProductController;
-use App\Http\Controllers\Api\AdminOrderController;
-use App\Http\Controllers\Api\AdminCategoryController;
-use App\Http\Controllers\Api\AdminDashboardController;
-use App\Http\Controllers\Api\NotificationController;
-use App\Http\Controllers\Api\WishlistController;
-use App\Http\Controllers\Api\AddressController;
-use App\Http\Controllers\Api\PaymentController;
-use App\Http\Controllers\Api\VendorPayoutController;
-use App\Http\Controllers\Api\AdminPayoutController;
+use App\Http\Controllers\Api\VendorRequestController;
 use App\Http\Controllers\Api\VendorWalletController;
-use App\Http\Controllers\Api\AdminPaymentController;
-use App\Http\Controllers\Api\PaymentWebhookController;
+use App\Http\Controllers\Api\WishlistController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -46,59 +46,59 @@ Route::prefix('auth')->group(function () {
     Route::post(
         '/register',
         [AuthController::class, 'register']
-    );
+    )->middleware('throttle:5,1');
 
     Route::post(
         '/login',
         [AuthController::class, 'login']
+    )->middleware('throttle:5,1');
+
+    Route::post(
+        '/platform-login',
+        [AuthController::class, 'platformLogin']
+    )->middleware('throttle:5,1');
+
+    Route::post(
+        '/forgot-password',
+        [AuthController::class, 'forgotPassword']
+    )->middleware('throttle:5,1');
+
+    Route::post(
+        '/verify-reset-code',
+        [
+            AuthController::class,
+            'verifyResetCode',
+        ]
+    )->middleware(
+        'throttle:10,1'
     );
 
-   Route::post(
-    '/platform-login',
-    [AuthController::class, 'platformLogin']
-)->middleware('throttle:5,1');
+    Route::post(
+        '/reset-password',
+        [
+            AuthController::class,
+            'resetPassword',
+        ]
+    )->middleware(
+        'throttle:5,1'
+    );
 
-Route::post(
-    '/forgot-password',
-    [AuthController::class, 'forgotPassword']
-)->middleware('throttle:5,1');
+    Route::middleware(['auth:sanctum',  'tenant.active'])->group(function () {
 
-Route::post(
-    '/verify-reset-code',
-    [
-        AuthController::class,
-        'verifyResetCode'
-    ]
-)->middleware(
-    'throttle:10,1'
-);
-
-Route::post(
-    '/reset-password',
-    [
-        AuthController::class,
-        'resetPassword'
-    ]
-)->middleware(
-    'throttle:5,1'
-);
-
-    Route::middleware([ 'auth:sanctum',  'tenant.active',])->group(function () {
-
-    Route::put(
-    '/profile',
-    [
-        AuthController::class,
-        'updateProfile'
-    ]
-);
-   Route::put(
-    '/change-password',
-    [
-        AuthController::class,
-        'changePassword'
-    ]
- );
+        Route::put(
+            '/profile',
+            [
+                AuthController::class,
+                'updateProfile',
+            ]
+        );
+        Route::put(
+            '/change-password',
+            [
+                AuthController::class,
+                'changePassword',
+            ]
+        );
 
         Route::post(
             '/logout',
@@ -138,15 +138,13 @@ Route::get(
     [CategoryController::class, 'index']
 );
 
-
 /*
 |--------------------------------------------------------------------------
 | Authenticated User Routes
 |--------------------------------------------------------------------------
 */
 
-    Route::middleware([ 'auth:sanctum',  'tenant.active',])->group(function () {
-
+Route::middleware(['auth:sanctum',  'tenant.active'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
@@ -166,60 +164,60 @@ Route::get(
 
     /*
     |-----------------------------------------------------------------------|
-    | Adresses 
+    | Adresses
     |-----------------------------------------------------------------------|
     */
     Route::get(
-    '/addresses',
-    [AddressController::class, 'index']
-);
-
-Route::post(
-    '/addresses',
-    [AddressController::class, 'store']
-);
-
-Route::put(
-    '/addresses/{address}',
-    [AddressController::class, 'update']
-);
-
-Route::delete(
-    '/addresses/{address}',
-    [AddressController::class, 'destroy']
-);
-
-Route::post(
-    '/addresses/{address}/default',
-    [AddressController::class, 'makeDefault']
-);
-
-/* 
-|------------------------------------------------------------------------|
-| Payments
-|------------------------------------------------------------------------|
-*/
-
-if (app()->environment([
-    'local',
-    'testing',
-])) {
-    Route::post(
-        '/payments/{payment}/fake-success',
-        [
-            PaymentController::class,
-            'fakeSuccess',
-        ]
+        '/addresses',
+        [AddressController::class, 'index']
     );
 
     Route::post(
-        '/payments/{payment}/fake-failure',
-        [
-            PaymentController::class,
-            'fakeFailure',
-        ]
+        '/addresses',
+        [AddressController::class, 'store']
     );
-}
+
+    Route::put(
+        '/addresses/{address}',
+        [AddressController::class, 'update']
+    );
+
+    Route::delete(
+        '/addresses/{address}',
+        [AddressController::class, 'destroy']
+    );
+
+    Route::post(
+        '/addresses/{address}/default',
+        [AddressController::class, 'makeDefault']
+    );
+
+    /*
+    |------------------------------------------------------------------------|
+    | Payments
+    |------------------------------------------------------------------------|
+    */
+
+    if (app()->environment([
+        'local',
+        'testing',
+    ])) {
+        Route::post(
+            '/payments/{payment}/fake-success',
+            [
+                PaymentController::class,
+                'fakeSuccess',
+            ]
+        );
+
+        Route::post(
+            '/payments/{payment}/fake-failure',
+            [
+                PaymentController::class,
+                'fakeFailure',
+            ]
+        );
+    }
 
     /*
 |--------------------------------------------------------------------------
@@ -227,22 +225,20 @@ if (app()->environment([
 |--------------------------------------------------------------------------
 */
 
-Route::get(
-    '/wishlist',
-    [WishlistController::class, 'index']
-);
+    Route::get(
+        '/wishlist',
+        [WishlistController::class, 'index']
+    );
 
-Route::post(
-    '/wishlist/{product}',
-    [WishlistController::class, 'store']
-);
+    Route::post(
+        '/wishlist/{product}',
+        [WishlistController::class, 'store']
+    );
 
-Route::delete(
-    '/wishlist/{product}',
-    [WishlistController::class, 'destroy']
-);
-
-
+    Route::delete(
+        '/wishlist/{product}',
+        [WishlistController::class, 'destroy']
+    );
 
     /*
     |--------------------------------------------------------------------------
@@ -264,7 +260,6 @@ Route::delete(
         '/stores/my-store',
         [StoreController::class, 'update']
     );
-
 
     /*
     |--------------------------------------------------------------------------
@@ -292,7 +287,6 @@ Route::delete(
         [CartController::class, 'removeItem']
     );
 
-
     /*
     |--------------------------------------------------------------------------
     | Checkout
@@ -303,7 +297,6 @@ Route::delete(
         '/checkout',
         [CheckoutController::class, 'checkout']
     );
-
 
     /*
     |--------------------------------------------------------------------------
@@ -326,271 +319,262 @@ Route::delete(
         [OrderController::class, 'cancel']
     );
 
-
-    Route::middleware( 'role:vendor_owner')->group(function () {
+    Route::middleware('role:vendor_owner')->group(function () {
         Route::get(
-    '/vendor/wallet',
-    [VendorWalletController::class, 'index']
-);
-    /*
-    |--------------------------------------------------------------------------
-    | Vendor Orders
-    |--------------------------------------------------------------------------
-    */
-
-    Route::get(
-        '/vendor/orders',
-        [VendorOrderController::class, 'index']
-    );
-
-    Route::put(
-        '/vendor/orders/{vendorOrder}/status',
-        [VendorOrderController::class, 'updateStatus']
-    );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Vendor Categories
-    |--------------------------------------------------------------------------
-    */
-
-    Route::prefix('vendor/categories')->group(function () {
-
-        Route::get(
-            '/',
-            [VendorCategoryController::class, 'index']
+            '/vendor/wallet',
+            [VendorWalletController::class, 'index']
         );
+        /*
+        |--------------------------------------------------------------------------
+        | Vendor Orders
+        |--------------------------------------------------------------------------
+        */
 
-        Route::post(
-            '/',
-            [VendorCategoryController::class, 'store']
+        Route::get(
+            '/vendor/orders',
+            [VendorOrderController::class, 'index']
         );
 
         Route::put(
-            '/{category}',
-            [VendorCategoryController::class, 'update']
+            '/vendor/orders/{vendorOrder}/status',
+            [VendorOrderController::class, 'updateStatus']
         );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Vendor Categories
+        |--------------------------------------------------------------------------
+        */
+
+        Route::prefix('vendor/categories')->group(function () {
+
+            Route::get(
+                '/',
+                [VendorCategoryController::class, 'index']
+            );
+
+            Route::post(
+                '/',
+                [VendorCategoryController::class, 'store']
+            );
+
+            Route::put(
+                '/{category}',
+                [VendorCategoryController::class, 'update']
+            );
+
+            Route::delete(
+                '/{category}',
+                [VendorCategoryController::class, 'destroy']
+            );
+        });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Vendor Product Images
+        |--------------------------------------------------------------------------
+        */
+
+        Route::prefix(
+            'vendor/products/{product}/images'
+        )->group(function () {
+
+            Route::get(
+                '/',
+                [VendorProductImageController::class, 'index']
+            );
+
+            Route::post(
+                '/',
+                [VendorProductImageController::class, 'store']
+            );
+        });
 
         Route::delete(
-            '/{category}',
-            [VendorCategoryController::class, 'destroy']
-        );
-    });
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Vendor Product Images
-    |--------------------------------------------------------------------------
-    */
-
-    Route::prefix(
-        'vendor/products/{product}/images'
-    )->group(function () {
-
-        Route::get(
-            '/',
-            [VendorProductImageController::class, 'index']
+            '/vendor/product-images/{image}',
+            [VendorProductImageController::class, 'destroy']
         );
 
         Route::post(
-            '/',
-            [VendorProductImageController::class, 'store']
-        );
-    });
-
-    Route::delete(
-        '/vendor/product-images/{image}',
-        [VendorProductImageController::class, 'destroy']
-    );
-
-    Route::post(
-        '/vendor/product-images/{image}/main',
-        [VendorProductImageController::class, 'makeMain']
-    );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Vendor Products
-    |--------------------------------------------------------------------------
-    */
-
-    Route::prefix('vendor/products')->group(function () {
-
-        Route::get(
-            '/',
-            [VendorProductController::class, 'index']
+            '/vendor/product-images/{image}/main',
+            [VendorProductImageController::class, 'makeMain']
         );
 
-        Route::post(
-            '/',
-            [VendorProductController::class, 'store']
-        );
+        /*
+        |--------------------------------------------------------------------------
+        | Vendor Products
+        |--------------------------------------------------------------------------
+        */
+
+        Route::prefix('vendor/products')->group(function () {
+
+            Route::get(
+                '/',
+                [VendorProductController::class, 'index']
+            );
+
+            Route::post(
+                '/',
+                [VendorProductController::class, 'store']
+            );
+
+            Route::put(
+                '/{product}',
+                [VendorProductController::class, 'update']
+            );
+
+            Route::delete(
+                '/{product}',
+                [VendorProductController::class, 'destroy']
+            );
+        });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Vendor Product Variants
+        |--------------------------------------------------------------------------
+        */
+
+        Route::prefix('vendor/products/{product}/variants'
+        )->group(function () {
+
+            Route::get(
+                '/',
+                [VendorProductVariantController::class, 'index']
+            );
+
+            Route::post(
+                '/',
+                [VendorProductVariantController::class, 'store']
+            );
+        });
 
         Route::put(
-            '/{product}',
-            [VendorProductController::class, 'update']
+            '/vendor/variants/{variant}',
+            [VendorProductVariantController::class, 'update']
         );
 
         Route::delete(
-            '/{product}',
-            [VendorProductController::class, 'destroy']
-        );
-    });
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Vendor Product Variants
-    |--------------------------------------------------------------------------
-    */
-
-    Route::prefix( 'vendor/products/{product}/variants'
-    )->group(function () {
-
-        Route::get(
-            '/',
-            [VendorProductVariantController::class, 'index']
+            '/vendor/variants/{variant}',
+            [VendorProductVariantController::class, 'destroy']
         );
 
-        Route::post(
-            '/',
-            [VendorProductVariantController::class, 'store']
-        );
-    });
+        Route::middleware(['auth:sanctum', 'role:vendor_owner'])->group(function () {
+            Route::get(
+                '/vendor/payouts',
+                [VendorPayoutController::class, 'index']
+            );
 
-    Route::put(
-        '/vendor/variants/{variant}',
-        [VendorProductVariantController::class, 'update']
-    );
+            Route::post(
+                '/vendor/payouts',
+                [VendorPayoutController::class, 'store']
+            );
+        });
 
-    Route::delete(
-        '/vendor/variants/{variant}',
-        [VendorProductVariantController::class, 'destroy']
-    );
+        /*
+        |--------------------------------------------------------------------------
+        | Vendor Attributes
+        |--------------------------------------------------------------------------
+        */
 
-    Route::middleware([ 'auth:sanctum', 'role:vendor_owner'])->group(function () {
-        Route::get(
-    '/vendor/payouts',
-    [VendorPayoutController::class, 'index']
-);
+        Route::prefix(
+            'vendor/attributes'
+        )->group(function () {
 
-Route::post(
-    '/vendor/payouts',
-    [VendorPayoutController::class, 'store']
-);
- });
+            Route::get(
+                '/',
+                [VendorAttributeController::class, 'index']
+            );
 
-    /*
-    |--------------------------------------------------------------------------
-    | Vendor Attributes
-    |--------------------------------------------------------------------------
-    */
+            Route::post(
+                '/',
+                [VendorAttributeController::class, 'store']
+            );
 
-    Route::prefix(
-        'vendor/attributes'
-    )->group(function () {
+            Route::delete(
+                '/{attribute}',
+                [VendorAttributeController::class, 'destroy']
+            );
+        });
 
-        Route::get(
-            '/',
-            [VendorAttributeController::class, 'index']
-        );
+        /*
+        |--------------------------------------------------------------------------
+        | Vendor Attribute Values
+        |--------------------------------------------------------------------------
+        */
 
-        Route::post(
-            '/',
-            [VendorAttributeController::class, 'store']
-        );
+        Route::prefix(
+            'vendor/attributes/{attribute}/values'
+        )->group(function () {
+
+            Route::get(
+                '/',
+                [VendorAttributeValueController::class, 'index']
+            );
+
+            Route::post(
+                '/',
+                [VendorAttributeValueController::class, 'store']
+            );
+        });
 
         Route::delete(
-            '/{attribute}',
-            [VendorAttributeController::class, 'destroy']
+            '/vendor/attribute-values/{value}',
+            [VendorAttributeValueController::class, 'destroy']
         );
-    });
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Vendor Attribute Values
-    |--------------------------------------------------------------------------
-    */
-
-    Route::prefix(
-        'vendor/attributes/{attribute}/values'
-    )->group(function () {
+        /*
+        |--------------------------------------------------------------------------
+        | Vendor Inventory
+        |--------------------------------------------------------------------------
+        */
 
         Route::get(
-            '/',
-            [VendorAttributeValueController::class, 'index']
+            '/vendor/inventory',
+            [VendorInventoryController::class, 'index']
         );
 
         Route::post(
-            '/',
-            [VendorAttributeValueController::class, 'store']
+            '/vendor/inventory/transactions',
+            [VendorInventoryTransactionController::class, 'store']
+        );
+
+        Route::get(
+            '/vendor/inventory/{inventory}/transactions',
+            [VendorInventoryTransactionController::class, 'index']
+        );
+
+        Route::get(
+            '/vendor/inventory/dashboard',
+            [VendorInventoryDashboardController::class, 'index']
         );
     });
 
-    Route::delete(
-        '/vendor/attribute-values/{value}',
-        [VendorAttributeValueController::class, 'destroy']
-    );
-
-
     /*
-    |--------------------------------------------------------------------------
-    | Vendor Inventory
-    |--------------------------------------------------------------------------
+    |------------------------------------------------------------------------|
+    | Notifications
+    |------------------------------------------------------------------------|
     */
+    Route::get(
+        '/notifications',
+        [NotificationController::class, 'index']
+    );
 
     Route::get(
-        '/vendor/inventory',
-        [VendorInventoryController::class, 'index']
+        '/notifications/unread-count',
+        [NotificationController::class, 'unreadCount']
     );
 
     Route::post(
-        '/vendor/inventory/transactions',
-        [VendorInventoryTransactionController::class, 'store']
+        '/notifications/{id}/read',
+        [NotificationController::class, 'markAsRead']
     );
 
-    Route::get(
-        '/vendor/inventory/{inventory}/transactions',
-        [VendorInventoryTransactionController::class, 'index']
+    Route::post(
+        '/notifications/read-all',
+        [NotificationController::class, 'markAllAsRead']
     );
-
-    Route::get(
-        '/vendor/inventory/dashboard',
-        [VendorInventoryDashboardController::class, 'index']
-    );
-    });
-
-
-    /*
-    |------------------------------------------------------------------------|
-    | Notifications 
-    |------------------------------------------------------------------------|
-    */
-    Route::get(
-    '/notifications',
-    [NotificationController::class, 'index']
-);
-
-Route::get(
-    '/notifications/unread-count',
-    [NotificationController::class, 'unreadCount']
-);
-
-Route::post(
-    '/notifications/{id}/read',
-    [NotificationController::class, 'markAsRead']
-);
-
-Route::post(
-    '/notifications/read-all',
-    [NotificationController::class, 'markAllAsRead']
-);
 });
-
 
 /*
 |--------------------------------------------------------------------------
@@ -598,7 +582,7 @@ Route::post(
 |--------------------------------------------------------------------------
 */
 
-Route::middleware([  'auth:sanctum', 'tenant.active',  'role:tenant_admin,platform_admin',
+Route::middleware(['auth:sanctum', 'tenant.active',  'role:tenant_admin,platform_admin',
 ])
     ->prefix('admin')
     ->group(function () {
@@ -613,7 +597,6 @@ Route::middleware([  'auth:sanctum', 'tenant.active',  'role:tenant_admin,platfo
             '/dashboard',
             [AdminDashboardController::class, 'index']
         );
-
 
         /*
         |--------------------------------------------------------------------------
@@ -635,7 +618,6 @@ Route::middleware([  'auth:sanctum', 'tenant.active',  'role:tenant_admin,platfo
             '/vendor-requests/{vendorRequest}/reject',
             [AdminVendorRequestController::class, 'reject']
         );
-
 
         /*
         |--------------------------------------------------------------------------
@@ -663,7 +645,6 @@ Route::middleware([  'auth:sanctum', 'tenant.active',  'role:tenant_admin,platfo
             [AdminStoreController::class, 'suspend']
         );
 
-
         /*
         |--------------------------------------------------------------------------
         | Products
@@ -689,7 +670,6 @@ Route::middleware([  'auth:sanctum', 'tenant.active',  'role:tenant_admin,platfo
             [AdminProductController::class, 'reject']
         );
 
-
         /*
         |--------------------------------------------------------------------------
         | Orders
@@ -705,7 +685,6 @@ Route::middleware([  'auth:sanctum', 'tenant.active',  'role:tenant_admin,platfo
             '/orders/{order}/status',
             [AdminOrderController::class, 'updateStatus']
         );
-
 
         /*
         |--------------------------------------------------------------------------
@@ -734,23 +713,23 @@ Route::middleware([  'auth:sanctum', 'tenant.active',  'role:tenant_admin,platfo
         );
 
         Route::middleware([
-    'auth:sanctum',
-    'role:tenant_admin,platform_admin',
-])->group(function () {
+            'auth:sanctum',
+            'role:tenant_admin,platform_admin',
+        ])->group(function () {
 
-    Route::get(
-    '/payouts',
-    [AdminPayoutController::class, 'index']
-);
+            Route::get(
+                '/payouts',
+                [AdminPayoutController::class, 'index']
+            );
 
-Route::patch(
-    '/payouts/{payout}/status',
-    [AdminPayoutController::class, 'updateStatus']
-);
-});
+            Route::patch(
+                '/payouts/{payout}/status',
+                [AdminPayoutController::class, 'updateStatus']
+            );
+        });
 
-Route::post(
-    '/payments/{payment}/refund',
-    [AdminPaymentController::class, 'refund']
-);
+        Route::post(
+            '/payments/{payment}/refund',
+            [AdminPaymentController::class, 'refund']
+        );
     });

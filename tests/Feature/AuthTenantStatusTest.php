@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
+use Tests\TestCase;
 
 class AuthTenantStatusTest extends TestCase
 {
@@ -15,7 +15,7 @@ class AuthTenantStatusTest extends TestCase
     {
         return Tenant::create([
             'name' => 'Test Company',
-            'slug' => 'test-company-' . uniqid(),
+            'slug' => 'test-company-'.uniqid(),
             'country_code' => 'PS',
             'default_currency' => 'ILS',
             'status' => $status,
@@ -87,5 +87,50 @@ class AuthTenantStatusTest extends TestCase
         ]);
 
         $response->assertForbidden();
+    }
+
+    public function test_registration_normalizes_email_and_prevents_case_duplicates(): void
+    {
+        $tenant = $this->createTenant();
+
+        $this->postJson('/api/auth/register', [
+            'tenant_id' => $tenant->id,
+            'name' => 'First User',
+            'email' => 'TEST@example.com',
+            'password' => 'Password123',
+            'password_confirmation' => 'Password123',
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('users', [
+            'tenant_id' => $tenant->id,
+            'email' => 'test@example.com',
+        ]);
+
+        $this->postJson('/api/auth/register', [
+            'tenant_id' => $tenant->id,
+            'name' => 'Second User',
+            'email' => 'test@example.com',
+            'password' => 'Password123',
+            'password_confirmation' => 'Password123',
+        ])->assertUnprocessable();
+    }
+
+    public function test_login_accepts_email_with_uppercase_letters(): void
+    {
+        $tenant = $this->createTenant();
+
+        $this->postJson('/api/auth/register', [
+            'tenant_id' => $tenant->id,
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+            'password' => 'Password123',
+            'password_confirmation' => 'Password123',
+        ])->assertCreated();
+
+        $this->postJson('/api/auth/login', [
+            'tenant_id' => $tenant->id,
+            'login' => 'TEST@EXAMPLE.COM',
+            'password' => 'Password123',
+        ])->assertOk();
     }
 }
