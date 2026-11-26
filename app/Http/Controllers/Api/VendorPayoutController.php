@@ -4,25 +4,22 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payout;
-use App\Models\Store;
 use App\Services\Marketplace\PayoutService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class VendorPayoutController extends Controller
 {
     public function index(Request $request)
     {
         $storeIds = $request->user()
-    ->ownedStores()
-    ->where('tenant_id', $request->user()->tenant_id)
-    ->pluck('id');
+            ->ownedStores()
+            ->where('tenant_id', $request->user()->tenant_id)
+            ->pluck('id');
 
         $payouts = Payout::query()
-            ->whereIn(
-                'store_id',
-                $storeIds
-            )
+            ->whereIn('store_id', $storeIds)
             ->latest()
             ->get();
 
@@ -36,45 +33,42 @@ class VendorPayoutController extends Controller
         PayoutService $payoutService
     ) {
         $data = $request->validate([
-            'store_id' => [
-                'required',
-                'integer',
-            ],
-
-            'amount' => [
-                'required',
-                'numeric',
-                'min:0.01',
-            ],
-
-            'currency' => [
-                'required',
-                'string',
-                'size:3',
-            ],
-
-            'method' => [
-                'required',
-                'string',
-                'max:50',
-            ],
-
-            'destination_details' => [
-                'nullable',
-                'array',
-            ],
+            'store_id' => ['required', 'integer'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'currency' => ['required', 'string', 'size:3'],
+            'method' => ['required', 'string', 'max:50'],
+            'destination_details' => ['nullable', 'array'],
         ]);
 
         $store = $request->user()
-    ->ownedStores()
-    ->where('tenant_id', $request->user()->tenant_id)
-    ->whereKey($data['store_id'])
-    ->first();
+            ->ownedStores()
+            ->where('tenant_id', $request->user()->tenant_id)
+            ->whereKey($data['store_id'])
+            ->first();
 
-if (! $store) {
-    throw ValidationException::withMessages([
-        'store_id' => 'هذا المتجر غير تابع لك.',
-    ]);
-}
+        if (! $store) {
+            throw ValidationException::withMessages([
+                'store_id' => 'هذا المتجر غير تابع لك.',
+            ]);
+        }
+
+        try {
+            $payout = $payoutService->request(
+                $store,
+                (float) $data['amount'],
+                strtoupper($data['currency']),
+                $data['method'],
+                $data['destination_details'] ?? []
+            );
+        } catch (RuntimeException $exception) {
+            throw ValidationException::withMessages([
+                'amount' => $exception->getMessage(),
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'تم إنشاء طلب السحب بنجاح.',
+            'payout' => $payout,
+        ], 201);
     }
 }

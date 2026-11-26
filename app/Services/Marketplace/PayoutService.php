@@ -244,6 +244,15 @@ class PayoutService
                 );
             }
 
+            if (
+                $status === 'cancelled' &&
+                $payout->status !== 'pending'
+            ) {
+                throw new RuntimeException(
+                    'Only pending payouts can be cancelled.'
+                );
+            }
+
             $wallet = SellerWallet::query()
                 ->where(
                     'store_id',
