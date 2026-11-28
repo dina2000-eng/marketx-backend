@@ -1,5 +1,3 @@
-
-cat > resources/views/admin/stores.blade.php <<'EOF'
 @extends('admin.layout')
 
 @section('title', 'Vendo | إدارة المتاجر')

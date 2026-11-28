@@ -137,6 +137,46 @@ class AdminWebController extends Controller
         return back()->with('success', 'تم رفض المنتج.');
     }
 
+    public function products(Request $request)
+    {
+        $validated = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'status' => ['nullable', 'in:all,pending_review,approved,rejected'],
+        ]);
+
+        $search = trim($validated['search'] ?? '');
+        $status = $validated['status'] ?? 'all';
+
+        $query = Product::with([
+            'store',
+            'tenant',
+            'category',
+            'images',
+        ])->latest();
+
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        if ($search !== '') {
+            $query->where(function ($builder) use ($search) {
+                $builder->where('name', 'like', "%{$search}%");
+
+                if (ctype_digit($search)) {
+                    $builder->orWhere('id', (int) $search);
+                }
+            });
+        }
+
+        $products = $query->paginate(15)->withQueryString();
+
+        return view('admin.products', compact(
+            'products',
+            'search',
+            'status'
+        ));
+    }
+
     public function approveVendorRequest(VendorRequest $vendorRequest)
     {
         if ($vendorRequest->status !== 'pending') {
@@ -220,6 +260,51 @@ class AdminWebController extends Controller
 
         return view('admin.stores', compact('stores'));
     }
+
+    public function vendorRequests(Request $request)
+{
+    $validated = $request->validate([
+        'search' => ['nullable', 'string', 'max:100'],
+        'status' => ['nullable', 'in:all,pending,approved,rejected'],
+    ]);
+
+    $search = trim($validated['search'] ?? '');
+    $status = $validated['status'] ?? 'all';
+
+    $query = VendorRequest::with([
+        'user',
+        'tenant',
+        'reviewer',
+    ])->latest();
+
+    if ($status !== 'all') {
+        $query->where('status', $status);
+    }
+
+    if ($search !== '') {
+        $query->where(function ($builder) use ($search) {
+            $builder->where('business_name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%")
+                ->orWhere('phone', 'like', "%{$search}%")
+                ->orWhereHas('user', function ($userQuery) use ($search) {
+                    $userQuery->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+
+            if (ctype_digit($search)) {
+                $builder->orWhere('id', (int) $search);
+            }
+        });
+    }
+
+    $vendorRequests = $query->paginate(5)->withQueryString();
+
+    return view('admin.vendor-requests', compact(
+        'vendorRequests',
+        'search',
+        'status'
+    ));
+}
 
     public function approveStore(Store $store)
     {

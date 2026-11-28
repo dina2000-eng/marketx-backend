@@ -54,6 +54,10 @@
             </p>
         </div>
         <span class="status">{{ $vendorRequests->count() }} طلب</span>
+    <a href="{{ route('admin.vendor-requests') }}"
+   style="display:inline-block;margin-top:10px;color:var(--primary);font-size:13px;text-decoration:none;font-weight:600;">
+    عرض جميع طلبات البائعين ←
+</a>
     </div>
 
     @forelse ($vendorRequests as $vendorRequest)

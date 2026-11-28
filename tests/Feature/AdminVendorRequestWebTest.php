@@ -219,4 +219,48 @@ private function createTestStore(Tenant $tenant, string $status): Store
         'status' => $status,
     ]);
 }
+public function test_platform_admin_can_view_all_vendor_requests(): void{    $tenant = $this->createStoreTenant();    $admin = $this->createPlatformAdmin();    $vendor = User::factory()->create([        'tenant_id' => $tenant->id,        'role' => 'customer',    ]);    $vendorRequest = VendorRequest::create([        'tenant_id' => $tenant->id,        'user_id' => $vendor->id,        'business_name' => 'Test Electronics',        'email' => 'electronics@test.com',        'phone' => '0599000000',        'status' => 'pending',    ]);    $response = $this->actingAs($admin, 'web')        ->get(route('admin.vendor-requests'));    $response->assertOk()        ->assertSee('Test Electronics')        ->assertSee('electronics@test.com')        ->assertSee('0599000000');}public function test_vendor_requests_can_be_filtered_by_status(): void{    $tenant = $this->createStoreTenant();    $admin = $this->createPlatformAdmin();    $vendor = User::factory()->create([        'tenant_id' => $tenant->id,        'role' => 'customer',    ]);    VendorRequest::create([        'tenant_id' => $tenant->id,        'user_id' => $vendor->id,        'business_name' => 'Pending Business',        'status' => 'pending',    ]);    VendorRequest::create([        'tenant_id' => $tenant->id,        'user_id' => $vendor->id,        'business_name' => 'Rejected Business',        'status' => 'rejected',    ]);    $response = $this->actingAs($admin, 'web')        ->get(route('admin.vendor-requests', ['status' => 'rejected']));    $response->assertOk()        ->assertSee('Rejected Business')        ->assertDontSee('Pending Business');}public function test_vendor_requests_can_be_searched(): void{    $tenant = $this->createStoreTenant();    $admin = $this->createPlatformAdmin();    $vendor = User::factory()->create([        'tenant_id' => $tenant->id,        'role' => 'customer',    ]);    VendorRequest::create([        'tenant_id' => $tenant->id,        'user_id' => $vendor->id,        'business_name' => 'Unique Search Business',        'email' => 'unique@test.com',        'phone' => '0599111222',        'status' => 'pending',    ]);    VendorRequest::create([        'tenant_id' => $tenant->id,        'user_id' => $vendor->id,        'business_name' => 'Another Business',        'email' => 'another@test.com',        'phone' => '0599333444',        'status' => 'pending',    ]);    $response = $this->actingAs($admin, 'web')        ->get(route('admin.vendor-requests', ['search' => 'Unique Search']));    $response->assertOk()        ->assertSee('Unique Search Business')        ->assertDontSee('Another Business');}
+public function test_vendor_requests_can_be_searched_by_email_and_phone(): void{    $tenant = $this->createStoreTenant();    $admin = $this->createPlatformAdmin();    $vendor = User::factory()->create([        'tenant_id' => $tenant->id,        'role' => 'customer',    ]);    VendorRequest::create([        'tenant_id' => $tenant->id,        'user_id' => $vendor->id,        'business_name' => 'Business One',        'email' => 'email-search@test.com',        'phone' => '0599888777',        'status' => 'pending',    ]);    $emailResponse = $this->actingAs($admin, 'web')        ->get(route('admin.vendor-requests', ['search' => 'email-search@test.com']));    $emailResponse->assertOk()        ->assertSee('Business One');    $phoneResponse = $this->actingAs($admin, 'web')        ->get(route('admin.vendor-requests', ['search' => '0599888777']));    $phoneResponse->assertOk()        ->assertSee('Business One');}
+public function test_vendor_requests_pagination_preserves_search_and_status_filters(): void
+{
+    $tenant = $this->createStoreTenant();
+    $admin = $this->createPlatformAdmin();
+
+    $vendor = User::factory()->create([
+        'tenant_id' => $tenant->id,
+        'role' => 'customer',
+    ]);
+
+    for ($i = 1; $i <= 6; $i++) {
+    $request = VendorRequest::create([
+        'tenant_id' => $tenant->id,
+        'user_id' => $vendor->id,
+        'business_name' => "Paginate Business {$i}",
+        'status' => 'pending',
+    ]);
+
+    $request->forceFill([
+        'created_at' => now()->addMinutes($i),
+        'updated_at' => now()->addMinutes($i),
+    ])->saveQuietly();
+}
+
+    $url = route('admin.vendor-requests', [
+        'search' => 'Paginate',
+        'status' => 'pending',
+    ]);
+
+    $firstPage = $this->actingAs($admin, 'web')->get($url);
+
+    $firstPage->assertOk()
+        ->assertSee('Paginate Business 6')
+        ->assertDontSee('Paginate Business 1')
+        ->assertSee('search=Paginate')
+        ->assertSee('status=pending');
+
+    $secondPage = $this->get($url . '&page=2');
+
+    $secondPage->assertOk()
+        ->assertSee('Paginate Business 1');
+}
 }

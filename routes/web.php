@@ -22,6 +22,9 @@ Route::middleware(['auth:web', 'platform.admin'])->prefix('admin')->name('admin.
     Route::post('/logout', [AdminWebController::class, 'logout'])
         ->name('logout');
 
+    Route::get('/products', [AdminWebController::class, 'products'])
+        ->name('products');
+
     Route::post('/products/{product}/approve', [AdminWebController::class, 'approveProduct'])
         ->name('products.approve');
 
@@ -61,9 +64,12 @@ Route::post('/categories/{category}/toggle-status', [AdminWebController::class, 
 Route::delete('/categories/{category}', [AdminWebController::class, 'deleteCategory'])
     ->name('categories.delete');
 
-        Route::get('/payouts', [AdminWebController::class, 'payouts'])
+Route::get('/payouts', [AdminWebController::class, 'payouts'])
         ->name('payouts');
 
-    Route::post('/payouts/{payout}/status', [AdminWebController::class, 'updatePayoutStatus'])
+Route::post('/payouts/{payout}/status', [AdminWebController::class, 'updatePayoutStatus'])
         ->name('payouts.status');
+
+Route::get('/vendor-requests', [AdminWebController::class, 'vendorRequests'])
+    ->name('vendor-requests');
 });

@@ -360,9 +360,19 @@
                 <span class="nav-icon">▦</span><span>لوحة التحكم والمنتجات</span>
             </a>
 
+            <a class="nav-link {{ request()->routeIs('admin.products*') ? 'active' : '' }}"
+               href="{{ route('admin.products') }}">
+                <span class="nav-icon">▧</span><span>المنتجات</span>
+            </a>
+
             <a class="nav-link {{ request()->routeIs('admin.stores*') ? 'active' : '' }}"
                href="{{ route('admin.stores') }}">
                 <span class="nav-icon">▣</span><span>المتاجر</span>
+            </a>
+
+            <a class="nav-link {{ request()->routeIs('admin.vendor-requests*') ? 'active' : '' }}"
+                href="{{ route('admin.vendor-requests') }}">
+                 <span class="nav-icon">▣</span><span>طلبات البائعين</span>
             </a>
 
             <a class="nav-link {{ request()->routeIs('admin.orders*') ? 'active' : '' }}"
